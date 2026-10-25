@@ -4,7 +4,7 @@ permissions:
   contents: read
 on:
   push:
-    branches: [main, release/**, feature/**]
+    branches: [main, release/**]
   pull_request:
     branches: [main, release/**, feature/**]
   workflow_dispatch:
@@ -87,19 +87,25 @@ jobs:
       shell: pwsh
       name: Set version number in AppxManifest
     - run: |
+        subst S: '${{ github.workspace }}'
+        if ($LASTEXITCODE -ne 0) { throw 'Cannot create short build drive' }
+      shell: pwsh
+      name: Use short Windows build paths
+    - run: |
         msbuild ./src/Calculator.slnx `
           -restore `
           -p:RestorePackagesConfig=true `
-          -bl:${{ github.workspace }}/output/Calculator.binlog `
-          -p:OutDir=${{ github.workspace }}\output\ `
+          -bl:S:\output\Calculator.binlog `
+          -p:OutDir=S:\output\ `
           -p:Platform=${{ matrix.platform }} `
           -p:Configuration=Release `
           -p:GenerateProjectSpecificOutputFolder=true `
           -p:Version=${{ env.buildVersion }} `
           -maxCpuCount `
           -t:Publish `
-          -p:PublishDir=${{ github.workspace }}\output\publish\
+          -p:PublishDir=S:\output\publish\
       shell: pwsh
+      working-directory: S:\
       name: Build calculator.slnx
     - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       name: Upload build outputs
@@ -196,6 +202,27 @@ jobs:
         ${{ env.appDir }}/Add-AppDevPackage.ps1 -Force
       shell: powershell
       name: Install app
+    - run: |
+        $package = Get-AppxPackage -Name Sternenwerk.Rechner
+        if (-not $package) { throw 'Sternenwerk package not installed' }
+        Start-Process explorer.exe -ArgumentList "shell:AppsFolder\$($package.PackageFamilyName)!App"
+        Start-Sleep -Seconds 5
+        Add-Type -AssemblyName System.Windows.Forms
+        Add-Type -AssemblyName System.Drawing
+        $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+        $image = [System.Drawing.Bitmap]::new($bounds.Width, $bounds.Height)
+        $graphics = [System.Drawing.Graphics]::FromImage($image)
+        try {
+          $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+          $image.Save('${{ github.workspace }}\native-preview.png', [System.Drawing.Imaging.ImageFormat]::Png)
+        } finally { $graphics.Dispose(); $image.Dispose() }
+      shell: pwsh
+      name: Capture native app preview
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      name: Upload native app preview
+      with:
+        name: Native-preview-x64
+        path: ${{ github.workspace }}/native-preview.png
     - run: |
         Invoke-WebRequest 'https://github.com/microsoft/WinAppDriver/releases/download/v1.2.1/WindowsApplicationDriver_1.2.1.msi' `
           -OutFile (New-Item -Path '${{ github.workspace }}/download2/wad.msi' -Force)
