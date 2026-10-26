@@ -1,3 +1,30 @@
+# Sternenwerk Rechner
+
+A design edition of [Windows Calculator](https://github.com/microsoft/calculator),
+with midnight blue, warm brass and a paper-colored light theme. Native Windows app;
+the upstream calculation engine, commands, layouts and keyboard shortcuts are unchanged.
+Windows high contrast keeps its system colors.
+
+This edition has its own package identity, name and icon. It is an independent fork,
+not a Microsoft release. The MIT license and upstream notices remain included.
+
+The public upstream does not include the proprietary graphing engine or licensed live
+currency data. Those upstream development-build limitations also apply to this edition.
+Diagnostic data remains disabled by the upstream default.
+
+Build and test requirements are the same as upstream (Visual Studio 2026, UWP/C++ tools,
+Windows SDK). The workflow builds and runs the upstream test suites on Windows runners.
+Its test certificate is created only on the ephemeral CI runner; it is not a production
+signing identity. A green workflow is required before treating a package as tested.
+
+![Design preview — not a running native build](design/preview.png)
+
+[HTML design preview](design/preview.html) · [Icon source](design/generate_icons.py)
+
+---
+
+## Upstream documentation
+
 # Calculator
 The Windows Calculator app is a modern Windows app written in C++ and C# that ships pre-installed with Windows.
 The app provides standard, scientific, and programmer calculator functionality, as well as a set of converters between various units of measurement and currencies.

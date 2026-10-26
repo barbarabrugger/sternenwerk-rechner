@@ -61,7 +61,7 @@
                            Margin="16,0,0,0"
                            VerticalAlignment="Center"
                            AutomationProperties.AccessibilityView="Raw"
-                           Source="ms-appx:///Assets/CalculatorAppList.png"/>
+                           Source="ms-appx:///Assets/SternenwerkAppList.png"/>
                     <TextBlock x:Name="AppName"
                                x:Uid="AppName"
                                Grid.Column="1"
@@ -69,6 +69,8 @@
                                HorizontalAlignment="Left"
                                VerticalAlignment="Center"
                                FontSize="12"
+                               CharacterSpacing="100"
+                               Foreground="{ThemeResource SternenwerkStarBrush}"
                                TextTrimming="CharacterEllipsis"/>
                 </Grid>
             </Grid>

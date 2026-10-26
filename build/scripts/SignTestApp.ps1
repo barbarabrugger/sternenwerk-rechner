@@ -1,6 +1,7 @@
 #requires -RunAsAdministrator
 param(
     [Parameter(Position = 0, Mandatory = $true)][string]$AppToSign,
+    [string]$Publisher = "CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
     [string]$SignTool = "C:\Program Files (x86)\Windows Kits\10\bin\10.*\x64\signtool.exe"
 )
 
@@ -15,7 +16,7 @@ if ((Test-Path -Path $SignTool -PathType Leaf) -ne $true) {
 $codeSignOid = New-Object -TypeName "System.Security.Cryptography.Oid" -ArgumentList @("1.3.6.1.5.5.7.3.3")
 $oidColl = New-Object -TypeName "System.Security.Cryptography.OidCollection"
 $oidColl.Add($codeSignOid) > $null
-$publisher = "CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US"
+# Publisher must match the manifest of the package being signed.
 $certReq = New-Object -TypeName "System.Security.Cryptography.X509Certificates.CertificateRequest" `
     -ArgumentList @($publisher, ([System.Security.Cryptography.ECDsa]::Create()), "SHA256") 
 $certReq.CertificateExtensions.Add((New-Object -TypeName "System.Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension" `

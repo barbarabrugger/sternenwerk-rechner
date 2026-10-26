@@ -1,8 +1,10 @@
 name: Windows Calculator Continuous Integration Pipeline
 run-name: WinCalc-CI-0.${{ github.run_number }}
+permissions:
+  contents: read
 on:
   push:
-    branches: [main, release/**, feature/**]
+    branches: [main, release/**]
   pull_request:
     branches: [main, release/**, feature/**]
   workflow_dispatch:
@@ -85,19 +87,25 @@ jobs:
       shell: pwsh
       name: Set version number in AppxManifest
     - run: |
+        subst S: '${{ github.workspace }}'
+        if ($LASTEXITCODE -ne 0) { throw 'Cannot create short build drive' }
+      shell: pwsh
+      name: Use short Windows build paths
+    - run: |
         msbuild ./src/Calculator.slnx `
           -restore `
           -p:RestorePackagesConfig=true `
-          -bl:${{ github.workspace }}/output/Calculator.binlog `
-          -p:OutDir=${{ github.workspace }}\output\ `
+          -bl:S:\output\Calculator.binlog `
+          -p:OutDir=S:\output\ `
           -p:Platform=${{ matrix.platform }} `
           -p:Configuration=Release `
           -p:GenerateProjectSpecificOutputFolder=true `
           -p:Version=${{ env.buildVersion }} `
           -maxCpuCount `
           -t:Publish `
-          -p:PublishDir=${{ github.workspace }}\output\publish\
+          -p:PublishDir=S:\output\publish\
       shell: pwsh
+      working-directory: S:\
       name: Build calculator.slnx
     - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       name: Upload build outputs
@@ -148,12 +156,12 @@ jobs:
     env:
       testDir: ${{ github.workspace }}/download/Calculator.Tests/AppPackages/Calculator.Tests_Test
     steps:
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       name: Download build outputs
       with:
         name: Build-${{ matrix.platform }}
         path: ${{ github.workspace }}/download
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       name: Download tools
       with:
         name: Tools-${{ matrix.platform }}
@@ -162,7 +170,7 @@ jobs:
         ${{ github.workspace }}/download/tools/SignTestApp.ps1 -AppToSign ${{ env.testDir }}/Calculator.Tests.msix
       shell: pwsh
       name: Install test certificate
-    - uses: ilammy/msvc-dev-cmd@v1
+    - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       name: Setup dev tools
     - run: vstest.console.exe ${{ env.testDir }}/Calculator.Tests.msix /Platform:${{ matrix.platform }} -- RunConfiguration.TreatNoTestsAsError=true
       name: Run managed unit tests
@@ -190,10 +198,31 @@ jobs:
       shell: pwsh
       name: Set screen resolution
     - run: |
-        ${{ github.workspace }}/download/tools/SignTestApp.ps1 -AppToSign '${{ env.appDir }}/Calculator_*.msixbundle'
+        ${{ github.workspace }}/download/tools/SignTestApp.ps1 -AppToSign '${{ env.appDir }}/Calculator_*.msixbundle' -Publisher 'CN=Sternenwerk'
         ${{ env.appDir }}/Add-AppDevPackage.ps1 -Force
       shell: powershell
       name: Install app
+    - run: |
+        $package = Get-AppxPackage -Name Sternenwerk.Rechner
+        if (-not $package) { throw 'Sternenwerk package not installed' }
+        Start-Process explorer.exe -ArgumentList "shell:AppsFolder\$($package.PackageFamilyName)!App"
+        Start-Sleep -Seconds 5
+        Add-Type -AssemblyName System.Windows.Forms
+        Add-Type -AssemblyName System.Drawing
+        $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+        $image = [System.Drawing.Bitmap]::new($bounds.Width, $bounds.Height)
+        $graphics = [System.Drawing.Graphics]::FromImage($image)
+        try {
+          $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+          $image.Save('${{ github.workspace }}\native-preview.png', [System.Drawing.Imaging.ImageFormat]::Png)
+        } finally { $graphics.Dispose(); $image.Dispose() }
+      shell: pwsh
+      name: Capture native app preview
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      name: Upload native app preview
+      with:
+        name: Native-preview-x64
+        path: ${{ github.workspace }}/native-preview.png
     - run: |
         Invoke-WebRequest 'https://github.com/microsoft/WinAppDriver/releases/download/v1.2.1/WindowsApplicationDriver_1.2.1.msi' `
           -OutFile (New-Item -Path '${{ github.workspace }}/download2/wad.msi' -Force)
@@ -204,8 +233,17 @@ jobs:
     - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       name: Setup dev tools
     - run: |
+        $package = Get-AppxPackage -Name Sternenwerk.Rechner
+        if (-not $package) { throw "Sternenwerk package not installed" }
+        $appId = "$($package.PackageFamilyName)!App"
+        $settings = '${{ github.workspace }}\download\publish\CalculatorUITests.ci.runsettings'
+        [xml]$runSettings = Get-Content -LiteralPath $settings
+        $runSettings.RunSettings.TestRunParameters.Parameter |
+          Where-Object Name -eq AppId |
+          ForEach-Object { $_.Value = $appId }
+        $runSettings.Save($settings)
         vstest.console.exe ${{ github.workspace }}\download\publish\CalculatorUITests.dll `
           /Platform:x64 `
-          /Settings:${{ github.workspace }}\download\publish\CalculatorUITests.ci.runsettings
+          /Settings:$settings
       shell: pwsh
       name: Run UI tests

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -807,6 +807,13 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Assets\SternenwerkAppList.png" />
+    <Content Include="Assets\SternenwerkMedTile.png" />
+    <Content Include="Assets\SternenwerkLargeTile.png" />
+    <Content Include="Assets\SternenwerkWideTile.png" />
+    <Content Include="Assets\SternenwerkSmallTile.png" />
+    <Content Include="Assets\SternenwerkStoreLogo.png" />
+    <Content Include="Assets\SternenwerkSplashScreen.png" />
     <Content Include="Assets\CalculatorIcons.ttf" />
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
